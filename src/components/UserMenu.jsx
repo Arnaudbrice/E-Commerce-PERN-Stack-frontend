@@ -1,0 +1,377 @@
+import "react-toastify/dist/ReactToastify.css";
+import { NavLink } from "react-router";
+import { useState } from "react";
+import useAuth from "../hooks/useAuth.jsx";
+import useCart from "../hooks/useCart.jsx";
+import { MdFavoriteBorder } from "react-icons/md";
+
+import defaultProfileImage from "../assets/images/default_profile.png";
+
+import logo from "../assets/images/logo.png";
+
+const UserMenu = () => {
+  const { logout, setIsLoadingAuth, user, numberOfFavoriteProducts } =
+    useAuth();
+
+  const {
+    cartList,
+    setCartList,
+    addProductToCart,
+    removeProductFromCart,
+    cartQuantity,
+    setCartQuantity,
+    cartProductsQuantity,
+    setCartProductsQuantity,
+  } = useCart();
+
+  // const [cartQuantity, setCartQuantity] = useState(0);
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleLinkClicked = () => {
+    // to close the menu when a link is clicked (on mobile screens)
+    document.activeElement.blur();
+
+    setIsOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  };
+
+  // NavLink from react-router gives us the isActive prop
+  return (
+    <div className="text-lg  shadow-sm navbar sm:text-xl bg-secondary lg:w-full ">
+      {/* hamburger menu */}
+      <div className="navbar-start lg:text-center  ">
+        {/* Hidden on middle screens with md:hidden */}
+        <div className="dropdown lg:hidden" onClick={() => setIsOpen(!isOpen)}>
+          <div tabIndex={0} role="button" className="mx-2 btn bg-black ">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              {" "}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 6h16M4 12h8m-8 6h16"
+              />{" "}
+            </svg>
+          </div>
+
+          <ul
+            tabIndex={0}
+            className="py-4 my-4 mt-3 space-y-8 text-white border rounded-lg shadow w-3xs bg-secondary menu menu-sm dropdown-content z-1 border-amber-50 ">
+            <li>
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white " : "text-black "}`}
+                to="/"
+                onClick={handleLinkClicked}>
+                Home
+              </NavLink>
+            </li>
+
+            {user.role === "admin" && (
+              <>
+                <li>
+                  <NavLink
+                    className={({
+                      isActive,
+                    }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+                      ${isActive ? "bg-black text-white" : "text-black "}`}
+                    to="/add-product"
+                    onClick={handleLinkClicked}>
+                    Add Product
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    className={({
+                      isActive,
+                    }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+                      ${isActive ? "bg-black text-white" : "text-black "}`}
+                    to="/admin/products"
+                    onClick={handleLinkClicked}>
+                    Admin Products
+                  </NavLink>
+                </li>
+
+                {/* admin dashboard */}
+                <li>
+                  <NavLink
+                    className={({
+                      isActive,
+                    }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+                      ${isActive ? "bg-black text-white" : "text-black "}`}
+                    to="/admin/dashboard"
+                    onClick={handleLinkClicked}>
+                    Dashboard
+                  </NavLink>
+                </li>
+              </>
+            )}
+
+            {/* wishlist */}
+            <li>
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white " : "text-black "}`}
+                to="/wishlist"
+                onClick={handleLinkClicked}>
+                <div className="flex  top-1.5 indicator ">
+                  <MdFavoriteBorder className="size-5 " />
+                  <span className="badge badge-sm left-[1rem] indicator-item ">
+                    {numberOfFavoriteProducts || 0}
+                  </span>
+                </div>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white" : "text-black "}`}
+                to="/orders"
+                onClick={handleLinkClicked}>
+                Orders
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white" : "text-black "}`}
+                to="/cart"
+                onClick={handleLinkClicked}>
+                <div className="flex indicator">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    {" "}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                    />{" "}
+                  </svg>
+                  <span className="badge badge-sm indicator-item">
+                    {cartProductsQuantity > 0 ? cartProductsQuantity : 0}
+                  </span>
+                </div>
+              </NavLink>
+            </li>
+
+            {/* profile */}
+
+            <li>
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white" : "text-black "}`}
+                onClick={handleLinkClicked}
+                to="/profile">
+                <img
+                  src={user?.userAvatar || defaultProfileImage}
+                  alt="profile-image"
+                  className="size-8 rounded-full"
+                />
+              </NavLink>
+            </li>
+
+            <li className=" text-lg block px-4 py-2  rounded text-black hover:bg-white">
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white" : "text-black "}`}
+                onClick={() => {
+                  handleLinkClicked();
+                  handleLogout();
+                }}
+                to="/login">
+                Logout
+              </NavLink>
+            </li>
+          </ul>
+        </div>
+
+        <NavLink to="/">
+          <img src={logo} alt="logo" className=" h-16 font-bold" />
+        </NavLink>
+      </div>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* shown from middle screens (md:flex) to big screens  */}
+      <div className="hidden navbar-center justify-between  lg:flex ">
+        <ul className="justify-around gap-6 px-4 text-xl menu menu-horizontal">
+          <li>
+            <NavLink
+              className={({
+                isActive,
+              }) => `  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white hover:text-black" : "text-black "}`}
+              to="/">
+              Home
+            </NavLink>
+          </li>
+
+          {user.role === "admin" && (
+            <>
+              <li>
+                <NavLink
+                  className={({
+                    isActive,
+                  }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+          ${isActive ? "bg-black text-white hover:text-black" : "text-black "}`}
+                  to="/add-product">
+                  Add Product
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  className={({
+                    isActive,
+                  }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+          ${isActive ? "bg-black text-white hover:text-black " : "text-black "}`}
+                  to="/admin/products">
+                  Admin Products
+                </NavLink>
+              </li>
+
+              {/* admin dashboard */}
+              <li>
+                <NavLink
+                  className={({
+                    isActive,
+                  }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+                      ${isActive ? "bg-black text-white hover:text-black" : "text-black "}`}
+                  to="/admin/dashboard"
+                  onClick={handleLinkClicked}>
+                  Dashboard
+                </NavLink>
+              </li>
+            </>
+          )}
+
+          {/* wishlist */}
+
+          <li>
+            <NavLink
+              className={({
+                isActive,
+              }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white hover:text-black " : "text-black "}`}
+              to="/wishlist">
+              <div className="flex  top-1.5 indicator ">
+                <MdFavoriteBorder className="size-5 " />
+                <span className="badge badge-sm left-[1rem] indicator-item ">
+                  {numberOfFavoriteProducts || 0}
+                </span>
+              </div>
+            </NavLink>
+          </li>
+
+          {user.role !== "admin" && (
+            <li>
+              <NavLink
+                className={({
+                  isActive,
+                }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white hover:text-black" : "text-black "}`}
+                to="/orders">
+                Orders
+              </NavLink>
+            </li>
+          )}
+
+          {/* cart */}
+          <li>
+            <NavLink
+              className={({
+                isActive,
+              }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white hover:text-black " : "text-black "}`}
+              to="/cart">
+              <div className="flex  top-1.5 indicator ">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  {" "}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />{" "}
+                </svg>
+                <span className="badge badge-sm indicator-item left-[1rem]">
+                  {cartProductsQuantity || 0}
+                </span>
+              </div>
+            </NavLink>
+          </li>
+
+          {/* profile */}
+
+          <li>
+            <NavLink
+              className={({
+                isActive,
+              }) => `text-lg  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white hover:text-black" : "text-black "}`}
+              to="/profile"
+              onClick={handleLinkClicked}>
+              <img
+                src={user?.userAvatar || defaultProfileImage}
+                alt="profile-image"
+                className="size-8 rounded-full"
+              />
+            </NavLink>
+          </li>
+
+          <li
+            onClick={() => {
+              handleLinkClicked();
+              handleLogout();
+            }}>
+            <NavLink
+              className={({
+                isActive,
+              }) => `  block px-4 py-2 h-full rounded hover:bg-white
+        ${isActive ? "bg-black text-white hover:text-black" : "text-black "}`}
+              to="/login">
+              Logout
+            </NavLink>
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+export default UserMenu;

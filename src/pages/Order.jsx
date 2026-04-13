@@ -1,0 +1,649 @@
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { customErrorMessage } from "../../utils/customErrorMessage";
+import { toast } from "react-toastify";
+import useCart from "../hooks/useCart.jsx";
+import Pagination from "../components/Pagination.jsx";
+import useAuth from "../hooks/useAuth.jsx";
+import { FaShippingFast } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
+import { FaLocationDot } from "react-icons/fa6";
+import ChooseStatusDialog from "../components/ChooseStatusDialog.jsx";
+import Searchbar from "../components/Searchbar.jsx";
+import AdminProducts from "./AdminProducts.jsx";
+
+/* const Order = ({
+  adminOrdersForCurrentPage,
+  setAdminOrdersForCurrentPage,
+  adminPaginationArray,
+  setAdminPaginationArray,
+  adminCurrentPage,
+  setAdminCurrentPage,
+
+  dashboardLoading,
+  fetchAllOrders,
+}) => { */
+const Order = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+
+  const [orderSearchTerm, setOrderSearchTerm] = useState("");
+
+  const { addProductToCart, decreaseProductQuantity, removeProductFromCart } =
+    useCart();
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectOrderId, setSelectOrderId] = useState(null);
+
+  const [ordersForCurrentPage, setOrdersForCurrentPage] = useState([]);
+  const [adminOrdersForCurrentPage, setAdminOrdersForCurrentPage] = useState(
+    [],
+  );
+
+  const [paginationArray, setPaginationArray] = useState([]);
+  const [adminPaginationArray, setAdminPaginationArray] = useState([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [adminCurrentPage, setAdminCurrentPage] = useState(1);
+
+  const { cartProductsQuantity, cartList } = useCart();
+
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
+  //! Fetch user orders on component mount
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        // window.location.search is an empty string when there’s no query, so ${baseUrl}/users/orders${qs} resolves to just /users/orders
+        const qs = location.search; // includes ?page=X&search=Y
+
+        // Choose endpoint based on role
+        const endpoint =
+          user.role === "admin" ? "/users/admin/orders" : "/users/orders";
+        const response = await fetch(`${baseUrl}${endpoint}${qs}`, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          const { message: errorMessage } = await response.json();
+          customErrorMessage(errorMessage, 5000);
+          return;
+        }
+        const data = await response.json();
+
+        if (user.role === "admin") {
+          setAdminOrdersForCurrentPage(data.orders || []);
+          setAdminPaginationArray(data.paginationArray || []);
+          setAdminCurrentPage(data.currentPageNumber);
+        } else {
+          console.log("data in order page", data);
+
+          // Get orders for current page - handle both nested and flat arrays
+          const ordersData = data.ordersProductsForCurrentPage;
+          console.log("ordersData", ordersData);
+
+          setOrdersForCurrentPage(ordersData || []);
+          setPaginationArray(data.paginationArray || []);
+          setCurrentPage(data.currentPageNumber);
+        }
+      } catch (error) {
+        // normalize to a readable string and avoid "[object Object]"
+        const msg =
+          error?.message ??
+          (typeof error === "string" ? error : String(error)) ??
+          "Something went wrong";
+        toast.error(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (baseUrl && user?.role) {
+      fetchOrders();
+    }
+    // fetchOrders();
+  }, [baseUrl, user.role, location.search]);
+
+  // Initialize search term from URL on mount (once)
+  useEffect(() => {
+    // new URLSearchParams(window.location.search) creates a URLSearchParams object from the window.location.search string
+    /* window.location.search: This property of the window.location object returns the query string part of the URL, including the leading question mark (?). For example, if the URL is https://example.com/products?category=electronics&search=laptop, window.location.search would be ?category=electronics&search=laptop. */
+    const params = new URLSearchParams(window.location.search);
+    // params.get("search") retrieves the value associated with the first parameter whose name is "search"
+    const urlSearch = params.get("search") || "";
+    setOrderSearchTerm(urlSearch);
+  }, []); // ✅ Empty deps = once on mount
+
+  // Update URL with search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      // Using `window.location.search` directly instead of `location.search` (from `useLocation`)
+      // This prevents `location.search` from becoming a dependency in this `useEffect` hook.
+      // If `location.search` were a dependency, any change to the URL's query string (e.g., pagination clicks)
+      // would re-run this effect, potentially resetting the page to 1 unexpectedly.
+      const params = new URLSearchParams(window.location.search);
+      if (orderSearchTerm) {
+        params.set("search", orderSearchTerm);
+      } else {
+        params.delete("search");
+      }
+      params.set("page", "1"); // Reset to page 1 on new search
+
+      navigate(`?${params.toString()}`);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [orderSearchTerm, navigate]);
+
+  /*  const fetchAllOrders = async () => {
+    try {
+      // window.location.search is an empty string when there’s no query, so ${baseUrl}/users/orders${qs} resolves to just /users/orders
+      const qs = location.search; // includes ?page=X&search=Y
+
+      // Choose endpoint based on role
+      const endpoint =
+        user.role === "admin" ? "/users/admin/orders" : "/users/orders";
+      const response = await fetch(`${baseUrl}${endpoint}${qs}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const { message: errorMessage } = await response.json();
+        customErrorMessage(errorMessage, 5000);
+        return;
+      }
+      const data = await response.json();
+
+      if (user.role === "admin") {
+        setAdminOrdersForCurrentPage(data.orders || []);
+        setAdminPaginationArray(data.paginationArray || []);
+        setAdminCurrentPage(data.currentPageNumber);
+      } else {
+        console.log("data in order page", data);
+
+        // Get orders for current page - handle both nested and flat arrays
+        const ordersData = data.ordersProductsForCurrentPage;
+        console.log("ordersData", ordersData);
+
+        setOrdersForCurrentPage(ordersData || []);
+        setPaginationArray(data.paginationArray || []);
+        setCurrentPage(data.currentPageNumber);
+      }
+    } catch (error) {
+      // normalize to a readable string and avoid "[object Object]"
+      const msg =
+        error?.message ??
+        (typeof error === "string" ? error : String(error)) ??
+        "Something went wrong";
+      toast.error(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }; */
+
+  const handleBuyAgain = async (e, id) => {
+    e.stopPropagation();
+    await addProductToCart(id, 1);
+  };
+
+  const handleImageClick = (id, e, product) => {
+    console.log("product in handleImageClick", product);
+    e.stopPropagation();
+    navigate(`/product/${id}`, {
+      state: {
+        quantityInCart: product.quantity,
+        stock: product?.productId?.stock || product.stock,
+        title: product?.productId?.title || product.title,
+        price: product?.productId?.price || product.price,
+        description: product?.productId?.description || product.description,
+        category: product?.productId?.category || product.category,
+        image: product?.productId?.image || product.image,
+      },
+    });
+  };
+
+  /****************************************
+   *           Download Invoice as pdf
+   ****************************************/
+
+  const handleInvoicePDF = async (id) => {
+    console.log("id", id);
+    try {
+      const response = await fetch(`${baseUrl}/users/orders/${id}/invoice`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const { message: errorMessage } = await response.json();
+        customErrorMessage(errorMessage, 5000);
+        return;
+      }
+
+      // !when fetching a PDF from the server, the response is a blob, converting it to a blob URL ALLOWS  the browser to hanlde it as a downloadable file
+
+      const blobUrl = URL.createObjectURL(await response.blob());
+
+      console.log("blobUrl", blobUrl);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      //  forces file download rather than browser preview
+      a.download = `invoice-${id}.pdf`;
+      // best practice to prevent clickjacking
+      a.rel = "noopener";
+      document.body.append(a);
+      // download the file immediately after the click event is triggered on the anchor element
+      a.click();
+      // removes the anchor element from the DOM
+      a.remove();
+      // Immediately releases memory after download starts->Prevents memory leaks from accumulated blob URLs
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      // normalize to a readable string and avoid "[object Object]"
+      const msg =
+        error?.message ??
+        (typeof error === "string" ? error : String(error)) ??
+        "Something went wrong";
+      toast.error(msg);
+    }
+  };
+
+  //********** handle edit order status **********
+  const handleEditOrderStatus = async (id) => {
+    setIsDialogOpen(true);
+    setSelectOrderId(id);
+  };
+
+  const sendStatusUpdateEmail = async (orderId, newStatus) => {
+    // send mail to user about status update ( only for admin since regular users can't change order status )
+
+    try {
+      const response = await fetch(
+        `${baseUrl}/users/admin/orders/${orderId}/send-status-update-email`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            newStatus,
+          }),
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const { message: errorMessage } = await response.json();
+        customErrorMessage(errorMessage, 5000);
+        return;
+      }
+
+      const { message } = await response.json();
+      toast.success(message);
+    } catch (error) {
+      // normalize to a readable string and avoid "[object Object]"
+      const msg =
+        error?.message ??
+        (typeof error === "string" ? error : String(error)) ??
+        "Something went wrong";
+      toast.error(msg);
+    }
+  };
+
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    if (user.role === "admin") {
+      // For admin, re-fetch all orders from backend to update UI ( in case order pages are opened on different pages and we want to make sure all are updated )
+      // await fetchAllOrders();
+
+      // Re-trigger the main fetch effect by updating URL
+      const params = new URLSearchParams(location.search);
+      navigate(`?${params.toString()}`, { replace: true });
+      // update order status on the dashboard page
+      setAdminOrdersForCurrentPage((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === orderId ? { ...order, status: newStatus } : order,
+        ),
+      );
+
+      await sendStatusUpdateEmail(orderId, newStatus);
+    } else {
+      // For regular users, update local state (update only the order that was changed, without re-fetching all orders from backend)
+      setOrdersForCurrentPage((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === orderId ? { ...order, status: newStatus } : order,
+        ),
+      );
+    }
+  };
+
+  // const loading = user.role === "admin" ? dashboardLoading : isLoading;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <span className="text-xl">Loading orders </span>
+        <span className="loading loading-ring loading-xl size-20 "></span>
+      </div>
+    );
+  }
+
+  //! Determine which orders and totals to display based on user role
+  const orders =
+    user.role === "admin" ? adminOrdersForCurrentPage : ordersForCurrentPage;
+  const paginationData =
+    user.role === "admin" ? adminPaginationArray : paginationArray;
+  const currentPageNumber =
+    user.role === "admin" ? adminCurrentPage : currentPage;
+
+  /*  const orderTotals = user.role === "admin" ? adminTotals : totals;
+  console.log("orderTotals", orderTotals); */
+
+  console.log("orders for current page", orders);
+
+  // Filter orders by search term (order ID or user email)
+  /*   const filteredOrders = (orders || []).filter((order) => {
+    // If search term is empty, return all orders
+    if (!orderSearchTerm.trim()) {
+      return true;
+    }
+    // otherwise display only orders that match the search term in either order ID, user email, or user name
+    const searchLower = orderSearchTerm.toLowerCase();
+    const orderId = order._id?.toLowerCase() || "";
+    const userEmail = order.userId?.email?.toLowerCase() || "";
+    const userName =
+      `${order.userId?.defaultAddress?.firstName || ""} ${order.userId?.defaultAddress?.lastName || ""}`.toLowerCase();
+
+    return (
+      orderId.includes(searchLower) ||
+      userEmail.includes(searchLower) ||
+      userName.includes(searchLower)
+    );
+  }); */
+
+  return (
+    <section>
+      <h2 className="w-2/3 mx-auto my-8 text-3xl font-bold text-center divider divider-secondary">
+        {user.role === "admin" ? "Order Management" : "Orders"}
+      </h2>
+      {/* ----------------search bar-------------------- */}
+      <Searchbar
+        searchTerm={orderSearchTerm}
+        setSearchTerm={setOrderSearchTerm}
+        placeholder={
+          user.role === "admin" ?
+            "Order ID, User Email, or Name"
+          : "Order ID or Product"
+        }
+      />
+      <div>
+        {!orders?.length ?
+          <div
+            role="alert"
+            className="w-2/3 mx-auto mt-8 text-xl alert alert-info">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              className="w-6 h-6 stroke-current shrink-0">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>No orders match your search "{orderSearchTerm}"</span>
+          </div>
+        : <>
+            <div className="flex flex-col  p-2 space-y-8  mt-8">
+              {orders.length === 0 ?
+                <div className="text-center text-gray-300 py-8">
+                  <p>No orders match your search "{orderSearchTerm}"</p>
+                </div>
+              : orders
+                  // {(orders || [])
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map((order) => {
+                    console.log("order in map", order);
+                    console.log(
+                      "######user in Order page######",
+                      order.shippingCosts,
+                    );
+                    // console.log("######order total######", orderTotals[index]);
+
+                    //  Calculate total for THIS specific order
+                    const productsTotal = order.products.reduce((acc, curr) => {
+                      const price = parseFloat(curr.price || 0);
+                      return acc + price * curr.quantity;
+                    }, 0);
+
+                    const shippingCosts = parseFloat(order.shippingCosts || 0);
+                    const orderTotal = (productsTotal + shippingCosts).toFixed(
+                      2,
+                    );
+
+                    return (
+                      <div
+                        key={order._id}
+                        className=" flex flex-col border border-gray rounded-lg p-2 space-y-4  ">
+                        {/* order date */}
+                        <p className="text-lg  ">
+                          <span className="underline underline-offset-8 pr-2 ">
+                            Order On:
+                          </span>{" "}
+                          {order.createdAt?.split("T")[0]}
+                        </p>
+                        {/*********** user who placed the order ***********/}
+                        {user.role === "admin" && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 w-full space-y-2 sm:space-y-0 gap-4 place-items-start ">
+                            <div className="text-sm text-gray-300  ">
+                              <h3 className="text-white text-lg mb-2">
+                                <span className="underline underline-offset-8 ">
+                                  From:
+                                </span>{" "}
+                              </h3>
+
+                              <p>
+                                {order.userId?.defaultAddress?.companyName ||
+                                  ""}
+                              </p>
+                              <p>
+                                {order.userId?.defaultAddress?.firstName || ""}{" "}
+                                {order.userId?.defaultAddress?.lastName || ""}
+                              </p>
+                              <p>
+                                {order.userId?.defaultAddress?.streetAddress?.replace(
+                                  ",",
+                                  "",
+                                ) || ""}
+                                {order.userId?.defaultAddress?.streetAddress &&
+                                  ",  "}
+                                {order.userId?.defaultAddress?.zipCode || ""}{" "}
+                                {order.userId?.defaultAddress?.city || ""}{" "}
+                              </p>
+                              <p>
+                                {order.userId?.defaultAddress?.state}{" "}
+                                {order.userId?.defaultAddress?.streetAddress &&
+                                  ",  "}
+                                {order.userId?.defaultAddress?.country || ""}
+                              </p>
+                              <p>{order.userId?.email || ""}</p>
+                            </div>
+                            <div className="text-sm text-center text-gray-300 border border-primary w-fit rounded-lg p-2 space-y-1 sm:col-start-3 sm:col-span-1 ml-auto ">
+                              <h3 className="text-white text-lg mb-2">
+                                <span className="flex flex-row items-center gap-2  underline underline-offset-8">
+                                  <FaLocationDot className="text-primary" />
+                                  Shipping Address:
+                                </span>
+                              </h3>
+                              <p>
+                                {order?.shippingAddress?.firstName}{" "}
+                                {order.shippingAddress?.lastName}
+                              </p>
+
+                              <p>
+                                {order.shippingAddress?.streetAddress?.replace(
+                                  ",",
+                                  "",
+                                )}{" "}
+                                {order.shippingAddress && ","}
+                                {order.shippingAddress?.zipCode}{" "}
+                                {order.shippingAddress?.city}
+                              </p>
+                              <p>
+                                {order.shippingAddress?.state}{" "}
+                                {order.shippingAddress?.country}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/***********order status ***********/}
+
+                        <ul className="steps sm:steps-horizontal steps-vertical">
+                          <li
+                            className={`step ${(order.status === "processing" || order.status === "shipped" || order.status === "delivered") && " step-primary"}`}>
+                            Processing
+                          </li>
+                          <li
+                            className={`step ${(order.status === "shipped" || order.status === "delivered") && "step-primary"}`}>
+                            Shipped
+                          </li>
+                          <li
+                            className={`step ${order.status === "delivered" && "step-primary"}`}>
+                            Delivered
+                          </li>
+                          <li
+                            className={`step ${order.status === "cancelled" && "before:!bg-red-500 after:!bg-red-500"}`}>
+                            Cancelled
+                          </li>
+                        </ul>
+                        <p className=" flex items-center gap-2 text-lg glow-text-secondary glass w-fit px-2 py-1 rounded-selector">
+                          📦 →{" "}
+                          <span
+                            className={
+                              order.status === "shipped" ? "text-cyan-400"
+                              : order.status === "delivered" ?
+                                "text-lime-500"
+                              : order.status === "cancelled" ?
+                                "text-red-500"
+                              : "text-secondary"
+                            }>
+                            {order.status}
+                            {order.status === "cancelled" && " ❌"}
+                            {order.status === "delivered" && " ✅"}
+                            {/* car shipping icon   */}
+                            {order.status === "shipped" && " 🚚"}
+                          </span>
+                          {user.role === "admin" && (
+                            <FaEdit
+                              className=" cursor-pointer"
+                              onClick={() => handleEditOrderStatus(order._id)}
+                            />
+                          )}
+                        </p>
+
+                        {/* order products */}
+                        <p className=" text-secondary text-center">
+                          Order - ({order._id})
+                        </p>
+                        {order.products.map((product) => {
+                          const p = product.productId || product;
+
+                          console.log("product in order", p);
+                          //! Check if the product is already in the cart
+                          const inCart = cartList.products?.some(
+                            (item) => item.productId._id === p._id,
+                          );
+                          return (
+                            <div
+                              key={p._id}
+                              className="grid sm:grid-cols-3 grid-cols-1 sm:space-y-1 space-y-4 place-items-center  h-full  p-2 rounded-lg border border-gray-100/20"
+                              onClick={(e) => handleImageClick(p._id, e, p)}>
+                              <div className="avatar size-30  sm:mr-auto">
+                                <img
+                                  // onClick={(e) =>
+                                  //   handleImageClick(product.productId._id, e, product)
+                                  // }
+                                  className="object-fill   bg-white mask mask-circle "
+                                  src={p.image}
+                                  alt={p.title}
+                                />
+                              </div>
+                              <div className="w-full text-center sm:text-left ">
+                                <h2>{p.title}</h2>
+                                <p>
+                                  Price: {parseFloat(p.price).toFixed(2) + " €"}
+                                </p>
+
+                                <p>
+                                  Quantity: {p.quantity || product.quantity}
+                                </p>
+                              </div>
+                              {/* display the buy again button only if the product is not in the cart */}
+                              {user.role !== "admin" && (
+                                <div>
+                                  {!inCart && (
+                                    <button
+                                      className="btn  btn-secondary"
+                                      onClick={(e) => handleBuyAgain(e, p._id)}>
+                                      Buy Again
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        <p className="text-md text-center   ">
+                          Shipping Costs:{" "}
+                          {parseFloat(order?.shippingCosts || 0).toFixed(2) +
+                            " €"}
+                        </p>
+                        <>
+                          {/* Display totals for each order */}
+                          <p className="text-lg text-center text-secondary font-bold ">
+                            {/* Totals: {orderTotals[index] + " €"} */}
+                            Totals: {orderTotal} €
+                          </p>
+                          <div className="justify-end flex ">
+                            <button
+                              onClick={() => handleInvoicePDF(order._id)}
+                              className="btn btn-lg btn-outline btn-secondary">
+                              Invoice PDF
+                            </button>
+                          </div>
+                        </>
+                      </div>
+                    );
+                  })
+              }
+            </div>
+          </>
+        }
+
+        {/* pagination */}
+
+        <Pagination
+          paginationArray={paginationData}
+          currentPage={currentPageNumber}
+        />
+      </div>
+      {/***********choose status dialog (outside the map) ***********/}
+      {isDialogOpen && (
+        <ChooseStatusDialog
+          orderId={selectOrderId}
+          isDialogOpen={isDialogOpen}
+          setIsDialogOpen={setIsDialogOpen}
+          onStatusUpdate={handleStatusUpdate}
+        />
+      )}
+    </section>
+  );
+};
+
+export default Order;

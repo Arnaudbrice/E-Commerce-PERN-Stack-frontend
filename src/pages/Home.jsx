@@ -1,0 +1,179 @@
+import React, { useState, useEffect, useCallback } from "react";
+
+import { nanoid } from "nanoid";
+import Cards from "../components/Cards.jsx";
+import Button from "../components/Button.jsx";
+import useProducts from "../hooks/useProducts.jsx";
+import useCategories from "../hooks/useCategories.jsx";
+
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router";
+import useCart from "../hooks/useCart.jsx";
+
+import ChatBotImage from "../assets/images/ChatBox_image.jpg";
+import ChatDialog from "../components/ChatDialog.jsx";
+import useAuth from "../hooks/useAuth.jsx";
+import Searchbar from "../components/Searchbar.jsx";
+
+const Home = () => {
+  const navigate = useNavigate();
+  const {
+    isLoading,
+    error,
+    updateProductStockAfterPayment,
+    searchTerm,
+    setSearchTerm,
+  } = useProducts();
+
+  const { user } = useAuth();
+
+  const { categories, setCategories } = useCategories();
+
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+
+  const handleChatModalOpen = () => {
+    setIsChatModalOpen(true);
+  };
+
+  if (error) {
+    return (
+      <div
+        role="alert"
+        className="w-2/3 mx-auto mt-8 text-xl alert alert-error">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-6 h-6 stroke-current shrink-0"
+          fill="none"
+          viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span>Error! Something went wrong 😕</span>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div>
+        <div role="status" className="max-w-sm animate-pulse">
+          <div className="h-2.5 bg-gray-200 rounded-full dark:bg-gray-700 w-48 mb-4"></div>
+          <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700 max-w-[360px] mb-2.5"></div>
+          <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700 mb-2.5"></div>
+          <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700 max-w-[330px] mb-2.5"></div>
+          <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700 max-w-[300px] mb-2.5"></div>
+          <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700 max-w-[360px]"></div>
+          <span className="sr-only">Loading...</span>
+        </div>
+
+        <div className="grid min-h-full grid-cols-1 sm:grid-cols-2 gap-6 mx-auto my-6 text-gray-400 md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] place-content-center sm:mx-6 auto-rows-min ">
+          {Array(12)
+            .keys()
+            .toArray()
+            .map(() => (
+              <div
+                className="flex w-5/6 flex-col gap-4 justify-center items-center mx-auto"
+                key={nanoid()}>
+                <div className="flex items-center gap-4">
+                  <div className="skeleton h-16 w-16 bg-gray-200  dark:bg-gray-700 shrink-0 rounded-full"></div>
+                  <div className="flex flex-col gap-4">
+                    <div className="skeleton h-4 w-20 bg-gray-200  dark:bg-gray-700"></div>
+                    <div className="skeleton h-4 w-28 bg-gray-200  dark:bg-gray-700"></div>
+                  </div>
+                </div>
+                <div className="skeleton h-32 w-full bg-gray-200  dark:bg-gray-700"></div>
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Check for browser support of speech recognition
+  /*   if (!browserSupportsSpeechRecognition) {
+    return <span>Browser doesn't support speech recognition.</span>;
+  } */
+
+  return (
+    <div>
+      {/* [box-shadow:none] is generated with higher specificity by Tailwind and therefore wins  */}
+      <div className="hero py-4 [box-shadow:none] ">
+        <div className="hero-content text-center">
+          <div className="max-w-md">
+            <h1 className="text-5xl font-bold"> Welcome to Bon Marché </h1>
+            <p className="py-6">
+              Discover the best deals on a wide range of products. Shop now and
+              save big with our unbeatable prices!
+            </p>
+            {/* <button className="btn btn-primary">Get Started</button> */}
+          </div>
+        </div>
+      </div>
+      {/* Kategorie-Navigation */}
+      <section
+        className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] w-full sm:max-w-xl  my-2 gap-2  mr-auto p-2"
+        aria-label="Product categories">
+        {categories?.map((category) => {
+          return <Button key={category} category={category} />;
+        })}
+      </section>
+
+      {/* ----------------search bar-------------------- */}
+      <Searchbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <section aria-label="list of products">
+        <Cards />
+      </section>
+
+      {/* chatbot */}
+
+      {user && (
+        <div className=" fixed bottom-[1.2em] right-[1em] z-[99] cursor-pointer rounded-full shadow-modal">
+          <button
+            onClick={handleChatModalOpen}
+            className=" floating-effect floating-shadow"
+            aria-label="open chat">
+            {" "}
+            <img
+              src={ChatBotImage}
+              alt="ChatBot"
+              className="size-24 rounded-full  "
+            />{" "}
+          </button>
+        </div>
+      )}
+      {/* Open the modal using document.getElementById('ID').showModal() method */}
+
+      {isChatModalOpen && (
+        <ChatDialog
+          isChatModalOpen={isChatModalOpen}
+          setIsChatModalOpen={setIsChatModalOpen}
+        />
+      )}
+
+      {/* CTA */}
+
+      {user && (
+        <section className="bg-secondary/10 dark:bg-secondary/5 rounded-xl p-8 text-center space-y-12">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+            Need Help?
+          </h2>
+          <p className="text-slate-300 dark:text-slate-300 mb-6">
+            Our support team is here to assist with any shipping questions or
+            concerns.
+          </p>
+          <button
+            onClick={() => navigate("/contact-us")}
+            className=" bg-secondary hover:bg-secondary/90 text-white font-bold py-3 px-8 rounded-lg transition-all btn btn-lg ">
+            Contact Support
+          </button>
+        </section>
+      )}
+    </div>
+  );
+};
+
+export default Home;
